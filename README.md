@@ -1,3 +1,5 @@
+## Project
+
 1.  There are three people: Alice, Bob & Carol.
 
 2.  Alice wants to send funds to Bob, but she only has ether & Bob does not care about Ethereum and wants to be paid in local currency.
@@ -27,3 +29,31 @@
 14. Bob leaves.
 
 15. Alice is notified that the transaction went through.
+
+## Setting up your environment 
+
+* Check if Node.js and truffle are installed by typing in your 
+terminal: 
+    * `node -v` 
+    * and then `truffle version`
+
+* Install [Ganache](https://truffleframework.com/ganache)
+
+* Initialize truffle `truffle init` to build a basic Truffle project
+
+* Create package.json file  by typing `npm init`
+
+* Write contracts in the contracts folder.
+
+* Modify `truffle-config.js` file (`truffle.js` for Mac). 
+
+* Run `truffle compile` to compile the contract
+    * Please check the required version of the Solidity compiler (for all .sol files including imported libraries) 
+    * by running `truffle version`. 
+    * If needed, run `npm uninstall -g truffle` 
+    * and the `npm install -g truffle`
+* Create `2_splitter_migration.js` in the migrations folder.
+
+* Run Ganache on your machine (select Quickstart)
+
+* Run `truffle migrate --reset` to migrate the contract.
