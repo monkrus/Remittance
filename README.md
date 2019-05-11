@@ -43,6 +43,8 @@ terminal:
 
 * Create package.json file  by typing `npm init`
 
+* Install OpenZeeplin library `npm install openzeppelin-solidity`
+
 * Write contracts in the contracts folder.
 
 * Modify `truffle-config.js` file (`truffle.js` for Mac). 
