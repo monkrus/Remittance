@@ -1,37 +1,29 @@
 pragma solidity >=0.4.22 <0.7.0;
-
+// Have to work on pausable, ownable functions
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-// mapped struct with index
-// stores the list of transactions
-contract Remittance is Ownable, Pausable {
-using SafeMath for uint;
 
-  struct transactionList {
-    uint transactionData;
+contract Remittance  {
+//using SafeMath for uint;
+
+
+    struct transactionList {
+    uint transactionAddress;
     bool isTransaction;
-  }
-
-
-    struct transactionFlow {
-    address initiator;
+    address initiator; 
     address receiver;
     uint amount;
     uint expirationTime;
     bytes32 keyHash;
-
 }
 
-
-
-
-
-  mapping(address => Transaction) public allTransactions;
-  address[] public transactionList;
+// functions below are responsible for transaction flow (is it a transaction, get transaction, new transaction  etc.)
+  mapping(address => transactionList) public allTransactions;
+  address[] public transactionFlow;
 
   function isTransaction(address transactionAddress) public view returns(bool isIndeed) {
       return allTransactions[transactionAddress].isTransaction;
@@ -53,5 +45,81 @@ using SafeMath for uint;
     allTransactions[transactionAddress].transactionData = transactionData;
     return true;
   }
+
+
+    mapping (uint => transactionList) flow ;
+    uint8 secondsPerBlock = 16; //average ETH blockctime completion is 15-17 secs
+    uint counter;
+    uint fee;
+    uint totalFees;
+
+    event LogInitiateRemittance(uint identification, address indexed initiator,
+    address recipient, uint amount, uint expirationTime);
+    event LogWithdrawal(uint identification, address indexed receiver, uint amount);
+    event LogSetFee(uint newFee);
+    event LogWithdrawFees(uint counter, uint amountWithdrawn);
+    event LogRefund(address initiator, address recipient, uint refund);// not sure what this event does???
+
+
+    constructor (uint initialFee) public {
+        setFee(initialFee);
+    }
+
+    function initiateKeyHash (uint tFA, address recipient) external pure  returns (bytes32 keyHash1) {
+        keyHash1 = keccak256(abi.encodePacked(tFA, recipient));
+        return keyHash1;
+    }
+// notPaused has to be fixed
+    function initiateRemittance (address recipient, uint secondsValid, bytes32 keyHash1) public payable notPaused() {
+        require(msg.value > fee, "Amount not sufficient");
+        uint identification = counter++;
+        uint amount = msg.value.sub(fee); //substract
+        totalFees = totalFees.add(fee);
+        uint expirationTime = block.number.add(secondsValid.div(secondsPerBlock));
+        bytes32 keyHash2 = keccak256(abi.encodePacked(identification, keyHash1));
+        flow[identification] = Remit({
+            initiator: msg.sender,
+            recipient: recipient,
+            amount: amount,
+            expirationTime: expirationTime,
+            keyHash: keyHash2
+        });
+        emit LogCreateRemittance(identification, msg.sender, recipient, amount, expirationTime);
+    }
+//notPaused has to be fixed
+    function withdrawFunds (uint identification, uint tFA) public notPaused() {
+        bytes32 keyHash1 = keccak256(abi.encodePacked(tFA, msg.sender));
+        require(keccak256(abi.encodePacked(identification, keyHash1)) == flow[identification].keyHash, "Access denied"); 
+        uint amountDue = flow[identification].amount;
+        require(amountDue > 0, "Insufficient funds");
+        flow[identification].amount = 0;
+        emit LogWithdrawal(identification, msg.sender, amountDue);
+        msg.sender.transfer(amountDue);
+    }
+//notPaused has to be fixed
+    function claimBack (uint identification) public notPaused() {
+        require(msg.sender == flow[identification].initiator, "Restricted access, initiator only");
+        require(block.number > flow[identification].expirationTime, "Disabled until expires");
+        uint amountDue = flow[identification].amount;
+        require(amountDue > 0, "Insufficient funds");
+        flow[identification].amount = 0;
+        emit LogClaimBackExecuted(msg.sender, flow[identification].recipient, amountDue);
+        msg.sender.transfer(amountDue);
+    }
+//onlyOwner has to be fixed
+    function setFee (uint newFee) public onlyOwner() {
+        fee = newFee;
+        emit LogSetFee(newFee);
+    }
+//onlyOwner has to be fixed
+    function withdrawFees () private onlyOwner {
+        require(totalFees > 0, "Insufficient funds");
+        uint amountDue = totalFees;
+        totalFees = 0;
+        emit LogWithdrawFees(counter, amountDue);
+        msg.sender.transfer(amountDue);
+    }
 }
+
+
 
