@@ -6,13 +6,29 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
 
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-//mapped struct with index
+// mapped struct with index
+// stores the list of transactions
 contract Remittance is Ownable, Pausable {
+using SafeMath for uint;
 
-  struct Transaction {
+  struct transactionList {
     uint transactionData;
     bool isTransaction;
   }
+
+
+    struct transactionFlow {
+    address initiator;
+    address receiver;
+    uint amount;
+    uint expirationTime;
+    bytes32 keyHash;
+
+}
+
+
+
+
 
   mapping(address => Transaction) public allTransactions;
   address[] public transactionList;
