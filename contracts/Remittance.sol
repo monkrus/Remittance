@@ -1,5 +1,5 @@
 pragma solidity >=0.4.22 <0.7.0;
-// Have to work on pausable, ownable functions
+
 import "openzeppelin-solidity/contracts/ownership/Ownable.sol";
 
 import "openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
@@ -7,8 +7,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/ERC20Pausable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 
-contract Remittance  {
-//using SafeMath for uint;
+contract Remittance is Ownable, Pausable  {
+using SafeMath for uint;
 
 
     struct transactionList {
@@ -20,6 +20,7 @@ contract Remittance  {
     uint expirationTime;
     bytes32 keyHash;
 }
+
 
 // functions below are responsible for transaction flow (is it a transaction, get transaction, new transaction  etc.)
   mapping(address => transactionList) public allTransactions;
@@ -33,7 +34,7 @@ contract Remittance  {
     return transactionList.length;
   }
 
-  function newTransaction(address transactionAddress, uint transactionData) public returns(uint rowNumber) {
+  function newTransaction(address transactionAddress, uint transactionData) public returns (uint rowNumber) {
     if(isTransaction(transactionAddress)) revert("transaction not created");
     allTransactions[transactionAddress].transactionData = transactionData;
     allTransactions[transactionAddress].isTransaction = true;
@@ -58,7 +59,7 @@ contract Remittance  {
     event LogWithdrawal(uint identification, address indexed receiver, uint amount);
     event LogSetFee(uint newFee);
     event LogWithdrawFees(uint counter, uint amountWithdrawn);
-    event LogRefund(address initiator, address recipient, uint refund);// not sure what this event does???
+    event LogRefund(address initiator, address recipient, uint refund);
 
 
     constructor (uint initialFee) public {
@@ -69,7 +70,7 @@ contract Remittance  {
         keyHash1 = keccak256(abi.encodePacked(tFA, recipient));
         return keyHash1;
     }
-// notPaused has to be fixed
+
     function initiateRemittance (address recipient, uint secondsValid, bytes32 keyHash1) public payable notPaused() {
         require(msg.value > fee, "Amount not sufficient");
         uint identification = counter++;
@@ -86,17 +87,17 @@ contract Remittance  {
         });
         emit LogCreateRemittance(identification, msg.sender, recipient, amount, expirationTime);
     }
-//notPaused has to be fixed
+
     function withdrawFunds (uint identification, uint tFA) public notPaused() {
         bytes32 keyHash1 = keccak256(abi.encodePacked(tFA, msg.sender));
-        require(keccak256(abi.encodePacked(identification, keyHash1)) == flow[identification].keyHash, "Access denied"); 
+        require(keccak256(abi.encodePacked(identification, keyHash1)) == flow[identification].keyHash, "No access allowed"); 
         uint amountDue = flow[identification].amount;
         require(amountDue > 0, "Insufficient funds");
         flow[identification].amount = 0;
         emit LogWithdrawal(identification, msg.sender, amountDue);
         msg.sender.transfer(amountDue);
     }
-//notPaused has to be fixed
+
     function claimBack (uint identification) public notPaused() {
         require(msg.sender == flow[identification].initiator, "Restricted access, initiator only");
         require(block.number > flow[identification].expirationTime, "Disabled until expires");
@@ -106,12 +107,12 @@ contract Remittance  {
         emit LogClaimBackExecuted(msg.sender, flow[identification].recipient, amountDue);
         msg.sender.transfer(amountDue);
     }
-//onlyOwner has to be fixed
+
     function setFee (uint newFee) public onlyOwner() {
         fee = newFee;
         emit LogSetFee(newFee);
     }
-//onlyOwner has to be fixed
+
     function withdrawFees () private onlyOwner {
         require(totalFees > 0, "Insufficient funds");
         uint amountDue = totalFees;
