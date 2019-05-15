@@ -51,7 +51,7 @@ using SafeMath for uint;
     mapping (uint => transactionList) flow ;
     uint8 secondsPerBlock = 16; //average ETH blockctime completion is 15-17 secs
     uint counter;
-    uint fee;
+    uint fee= 10;
     uint totalFees;
 
     event LogInitiateRemittance(uint identification, address indexed initiator,
@@ -71,7 +71,7 @@ using SafeMath for uint;
         return keyHash1;
     }
 
-    function initiateRemittance (address recipient, uint secondsValid, bytes32 keyHash1) public payable notPaused() {
+    function initiateRemittance (address recipient, uint secondsInWeek, bytes32 keyHash1) public payable notPaused() {
         require(msg.value > fee, "Amount not sufficient");
         uint identification = counter++;
         uint amount = msg.value.sub(fee); //substract
